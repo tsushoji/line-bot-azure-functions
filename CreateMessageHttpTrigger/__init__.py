@@ -15,6 +15,7 @@ from linebot.models import (
 from shared_code import blob_operation
 
 # 定数
+NEW_LINE_LINE_MESSAGE_API = '\n'
 PACKET_STR_CODE = 'utf-8'
 SIGNATURE_REQUEST_HEADER_NAME = 'x-line-signature'
 CONTAINER_NAME_MESSAGE_MODE_TYPE = 'tsusho-bot-config'
@@ -128,7 +129,7 @@ def message_text(event):
     # LineMessageAPI情報作成
     elif result_matching_line_message_api_info_notify:
         now_message_mode_type_name = get_message_mode_type_name(get_message_mode_type())
-        send_message = INFO_002 + str(updated_line_message_api_count) + ',' + INFO_003 + now_message_mode_type_name
+        send_message = INFO_002 + str(updated_line_message_api_count) + NEW_LINE_LINE_MESSAGE_API + INFO_003 + now_message_mode_type_name
     # チャットモード
     else:
         # メッセージタイプを取得
