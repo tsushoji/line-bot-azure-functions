@@ -4,7 +4,7 @@
 ### 概要  
 OpenAIAPI、LINEMessageAPIを活用したChatGPTLineBot。  
 ### 使用技術  
-* AzureFuctionsランタイムバージョン
+* AzureFuctionsランタイムバージョン  
 Linux  
 4.17.3.3  
 * pythonバージョン  
