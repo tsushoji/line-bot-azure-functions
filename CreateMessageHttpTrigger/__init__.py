@@ -3,6 +3,7 @@ import os
 import re
 import json
 import azure.functions as func
+import openai
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -43,6 +44,9 @@ channel_access_token = os.getenv('TSUSHO_BOT_CHANEL_ACCESS_TOKEN', None)
 
 line_bot_api = LineBotApi(channel_access_token)
 handler = WebhookHandler(channel_secret)
+
+openai.api_key = os.getenv('OPENAI_API_KEY', None)
+openai_model = os.getenv('OPENAI_MODEL', None)
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -99,7 +103,13 @@ def update_status_json(line_message_api_count, message_mode_type):
 
 
 def crate_message_in_chatGPTAPI(rceivedMessage):
-    return 'ChatGPTAPIでメッセージ作成しました。'
+    response=openai.ChatCompletion.create(
+        model=openai_model,
+        messages=[
+            {"role": "user", "content": rceivedMessage}
+        ]
+    )
+    return response['choices'][0]['message']['content']
 
 
 @handler.add(MessageEvent, message=TextMessage)
