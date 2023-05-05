@@ -2,6 +2,8 @@ import logging
 import os
 import re
 import json
+import datetime
+import pytz
 import azure.functions as func
 import openai
 from linebot import (
@@ -17,13 +19,19 @@ from shared_code import blob_operation
 
 # 定数
 NEW_LINE_LINE_MESSAGE_API = '\n'
+NEW_LINE_CHAT_LOG = '@NEWLINE'
 PACKET_STR_CODE = 'utf-8'
 SIGNATURE_REQUEST_HEADER_NAME = 'x-line-signature'
 CONTAINER_NAME_MESSAGE_MODE_TYPE = 'tsusho-bot-config'
+CONTAINER_NAME_CHAT_LOG = 'tsusho-bot-chat-log'
 BLOB_NAME_MESSAGE_MODE_TYPE = 'status.json'
+BLOB_NAME_DATETIME_FORMAT_CHAT_LOG = "%Y%m%d"
+BLOB_NAME_EXTENSION_CHAT_LOG = ".log"
 FILE_STR_CODE_STAUS_JSON = 'utf-8'
 LINE_MESSAGE_API_COUNT_KEY_STAUS_JSON = 'lineMessageAPICount'
 MESSAGE_MODE_TYPE_KEY_STAUS_JSON = 'messageModeType'
+TIMEZONE_CHAT_LOG = 'Asia/Tokyo'
+WRITE_DATETIME_FORMAT_CHAT_LOG = "%Y-%m-%d %H:%M:%S.%f"
 MIN_MESSAGE_MODE_TYPE = 0
 MAX_MESSAGE_MODE_TYPE = 1
 NONE_MESSAGE_MODE_TYPE = '0'
@@ -48,8 +56,28 @@ handler = WebhookHandler(channel_secret)
 openai.api_key = os.getenv('OPENAI_API_KEY', None)
 openai_model = os.getenv('OPENAI_MODEL', None)
 
+jst = pytz.timezone(TIMEZONE_CHAT_LOG)
+
+# ログ書き込みのため、グローバル変数で持たせる。
+received_message = ''
+send_message = ''
+
+
+def write_chat_log(start_datetime, end_datetime, now_mode_type, received_message, send_message):
+    blob_name = end_datetime.strftime(BLOB_NAME_DATETIME_FORMAT_CHAT_LOG) + BLOB_NAME_EXTENSION_CHAT_LOG
+    append_blob_client = blob_operation.get_blob_client(CONTAINER_NAME_CHAT_LOG, blob_name)
+    if not append_blob_client.exists():
+        append_blob_client.create_append_blob()
+    write_received_message = received_message.replace(NEW_LINE_LINE_MESSAGE_API, NEW_LINE_CHAT_LOG)
+    write_send_message = send_message.replace(NEW_LINE_LINE_MESSAGE_API, NEW_LINE_CHAT_LOG)
+    write_row_data = start_datetime.strftime(WRITE_DATETIME_FORMAT_CHAT_LOG) + ',' + end_datetime.strftime(WRITE_DATETIME_FORMAT_CHAT_LOG) + ',' + now_mode_type + ',' + write_received_message + ',' + write_send_message
+    append_blob_client.append_block(write_row_data + '\n')
+
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
+    # 開始時刻取得(ローカルタイムゾーン)
+    start_exe_datetime = datetime.datetime.now(jst)
+
     logging.info('Python HTTP trigger function processed a request.')
 
     # get x-line-signature header value
@@ -64,6 +92,13 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         handler.handle(body, signature)
     except InvalidSignatureError:
         func.HttpResponse(status_code=400)
+
+    # 現在のメッセージモードタイプを取得
+    now_message_mode_type = get_message_mode_type()
+    # 終了時刻取得(ローカルタイムゾーン)
+    end_exe_datetime = datetime.datetime.now(jst)
+
+    write_chat_log(start_exe_datetime, end_exe_datetime, now_message_mode_type, received_message, send_message)
 
     return func.HttpResponse('OK')
 
@@ -114,6 +149,9 @@ def crate_message_in_chatGPTAPI(rceivedMessage):
 
 @handler.add(MessageEvent, message=TextMessage)
 def message_text(event):
+    # ログ書き込みのため、グローバル変数で持たせる。
+    global received_message
+    global send_message
     received_message=event.message.text
     send_message=WARNING_001
     # モードを変更するか判定
@@ -128,7 +166,6 @@ def message_text(event):
     # モードを変更
     if result_matching_message_mode_type:
         updated_message_mode_type = result_matching_message_mode_type.group().replace('モード', '')
-        # jsonファイルを修正したとき、ソースを変更せず、制御できるようにしたい
         message_mode_type_name = get_message_mode_type_name(updated_message_mode_type)
         if len(message_mode_type_name):
             send_message = message_mode_type_name + INFO_001
