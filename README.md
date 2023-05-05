@@ -36,3 +36,10 @@ openai
     <td>LineMessageAPIで用いられるリクエストヘッダーx-line-signatureの値を作成。</td>
   </tr>
 </table>
+
+## Release Ver-1.0.2  
+### 概要  
+チャット履歴を保存する機能追加。  
+### 使用技術  
+* pythonライブラリー  
+pytz  
