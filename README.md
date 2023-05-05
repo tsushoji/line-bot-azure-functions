@@ -43,3 +43,7 @@ openai
 ### 使用技術  
 * pythonライブラリー  
 pytz  
+
+## Release Ver-1.0.3  
+### 概要  
+関数名を「CreateMessageHttpTrigger」から「CreateReplyMessageHttpTrigger」に修正。  
