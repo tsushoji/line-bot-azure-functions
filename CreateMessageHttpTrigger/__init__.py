@@ -76,7 +76,7 @@ def write_chat_log(start_datetime, end_datetime, now_mode_type, received_message
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     # 開始時刻取得(ローカルタイムゾーン)
-    start_exe_time = datetime.datetime.now(jst)
+    start_exe_datetime = datetime.datetime.now(jst)
 
     logging.info('Python HTTP trigger function processed a request.')
 
@@ -96,9 +96,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # 現在のメッセージモードタイプを取得
     now_message_mode_type = get_message_mode_type()
     # 終了時刻取得(ローカルタイムゾーン)
-    end_exe_time = datetime.datetime.now(jst)
+    end_exe_datetime = datetime.datetime.now(jst)
 
-    write_chat_log(start_exe_time, end_exe_time, now_message_mode_type, received_message, send_message)
+    write_chat_log(start_exe_datetime, end_exe_datetime, now_message_mode_type, received_message, send_message)
 
     return func.HttpResponse('OK')
 
